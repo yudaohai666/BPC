@@ -1,0 +1,10 @@
+README.md
+setup.py
+bpc/__init__.py
+bpc/lmeval.py
+bpc/misc.py
+bpc/modifier.py
+bpc.egg-info/PKG-INFO
+bpc.egg-info/SOURCES.txt
+bpc.egg-info/dependency_links.txt
+bpc.egg-info/top_level.txt

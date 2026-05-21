@@ -1,6 +1,6 @@
 # BPC
 
-**Binary Projection Cache** — sparse attention via 64-bit binary key hashing for long-context LLM inference. BPC compresses each cached key into a 64-bit hash, estimates Q-K similarity from hash codes during decode, and computes exact attention only over the top-k selected tokens.
+**Binary Principal Components** — sparse attention via 64-bit binary key hashing for long-context LLM inference. BPC compresses each cached key into a 64-bit hash, estimates Q-K similarity from hash codes during decode, and computes exact attention only over the top-k selected tokens.
 
 
 ## Installation
