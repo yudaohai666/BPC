@@ -241,15 +241,25 @@ __global__ void binary_project_dim128_hash64_kernel(
   const int block_idx = blockIdx.x;
   const int warpth_idx = threadIdx.x;
 
+  // L may not be a multiple of 32 (last block partially out of range); the
+  // token this thread is responsible for.
+  const int token_idx = 32 * block_idx + warpth_idx;
+  const bool in_range = token_idx < L;
+
   __shared__ __nv_bfloat162 A_cache[32 * 64];
   __shared__ __nv_bfloat162 quan_proj_cache[64];
 
   const __nv_bfloat162 *A_pt = &A[((B_idx * H + H_idx) * L + 32 * block_idx) * 64];
   const __nv_bfloat162 *quan_proj_pt = &quan_proj[(B_idx * H + H_idx) * 64 * 64];
 
+  // Out-of-range threads must still take part in the cooperative A_cache load
+  // (every thread contributes one row) so in-range threads see a fully
+  // populated cache; zero-fill instead of reading past A's last valid token.
   #pragma unroll
   for (int offset = 0; offset < 32 * 64; offset = offset + 32) {
-    A_cache[offset + warpth_idx] = A_pt[offset + warpth_idx];
+    A_cache[offset + warpth_idx] = in_range
+        ? A_pt[offset + warpth_idx]
+        : __float2bfloat162_rn(0.0);
   }
 
   long y_val = 0;
@@ -279,7 +289,9 @@ __global__ void binary_project_dim128_hash64_kernel(
   }
 
   long *y_pt = &y[(B_idx * H + H_idx) * L + 32 * block_idx];
-  y_pt[warpth_idx] = y_val;
+  if (in_range) {
+    y_pt[warpth_idx] = y_val;
+  }
 }
 
 
@@ -291,7 +303,7 @@ void binary_project_dim128_hash64(
   int L = A.size(2);
 
   dim3 threads(32);
-  dim3 blocks(L / 32, H, B);
+  dim3 blocks((L + 31) / 32, H, B);
 
   binary_project_dim128_hash64_kernel<<<blocks, threads>>>(
     (__nv_bfloat162*)(A.data_ptr<at::BFloat16>()),
